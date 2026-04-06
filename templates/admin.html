@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Ajouter une App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+    <div class="max-w-xl mx-auto mt-12 bg-white p-8 rounded-2xl shadow-xl">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">➕ Ajouter au catalogue</h2>
+
+        <form id="addForm" class="space-y-4">
+            <input type="text" id="name" placeholder="Nom de l'app" class="w-full p-3 border rounded-lg" required>
+            <textarea id="desc" placeholder="Description courte" class="w-full p-3 border rounded-lg" required></textarea>
+            <div class="flex gap-4">
+                <input type="number" id="price" placeholder="Prix (€)" class="w-1/2 p-3 border rounded-lg" step="0.01" required>
+                <input type="url" id="url" placeholder="Lien (URL)" class="w-1/2 p-3 border rounded-lg" required>
+            </div>
+            <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">
+                Enregistrer sur le serveur
+            </button>
+        </form>
+        <a href="index.html" class="block text-center mt-4 text-blue-600 underline text-sm">Voir le catalogue</a>
+    </div>
+
+    <script>
+        document.getElementById('addForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const appData = {
+                name: document.getElementById('name').value,
+                desc: document.getElementById('desc').value,
+                price: document.getElementById('price').value,
+                url: document.getElementById('url').value
+            };
+
+            const response = await fetch('http://127.0.0.1:5000/api/apps', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(appData)
+            });
+
+            if (response.ok) {
+                alert("Application ajoutée avec succès !");
+                document.getElementById('addForm').reset();
+            } else {
+                alert("Erreur lors de l'envoi.");
+            }
+        });
+    </script>
+</body>
+</html>
