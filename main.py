@@ -1,10 +1,10 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template # Ajout de render_template
 from flask_cors import CORS
 import json
 import os
 
 app = Flask(__name__)
-CORS(app)  # Autorise ton site web à communiquer avec le serveur Python
+CORS(app)
 
 DB_FILE = 'database.json'
 
@@ -13,24 +13,32 @@ if not os.path.exists(DB_FILE):
     with open(DB_FILE, 'w') as f:
         json.dump([], f)
 
-
 def get_db():
     with open(DB_FILE, 'r') as f:
         return json.load(f)
-
 
 def save_db(data):
     with open(DB_FILE, 'w') as f:
         json.dump(data, f, indent=4)
 
+# --- ROUTES DES PAGES (Pour le navigateur) ---
 
-# --- ROUTES ---
+@app.route('/')
+def home():
+    """Affiche le catalogue (index.html)"""
+    return render_template('index.html')
+
+@app.route('/admin')
+def admin_page():
+    """Affiche le formulaire d'ajout (admin.html)"""
+    return render_template('admin.html')
+
+# --- ROUTES API (Pour les données) ---
 
 @app.route('/api/apps', methods=['GET'])
 def get_apps():
     """Récupère la liste de toutes les applications"""
     return jsonify(get_db())
-
 
 @app.route('/api/apps', methods=['POST'])
 def add_app():
@@ -38,7 +46,6 @@ def add_app():
     new_app = request.json
     db = get_db()
 
-    # Structure de l'application
     app_entry = {
         "id": len(db) + 1,
         "name": new_app.get('name'),
@@ -51,7 +58,6 @@ def add_app():
     save_db(db)
     return jsonify(app_entry), 201
 
-
 if __name__ == '__main__':
-    # Lance le serveur sur le port 5000
-    app.run(debug=True, port=5000)
+    # On garde le port 5020 comme tu l'as configuré
+    app.run(debug=True, port=5020)
