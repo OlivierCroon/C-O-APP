@@ -10,9 +10,10 @@ CORS(app)
 
 DB_FILE = 'database.json'
 USERS_FILE = 'users.json'
+RENTALS_FILE = 'rentals.json'
 
 # Initialiser les bases de données si elles n'existent pas
-for file in [DB_FILE, USERS_FILE]:
+for file in [DB_FILE, USERS_FILE, RENTALS_FILE]:
     if not os.path.exists(file):
         with open(file, 'w') as f:
             json.dump([], f)
@@ -115,6 +116,44 @@ def get_me():
     if 'user' in session:
         return jsonify({"email": session['user']})
     return jsonify({"error": "Non connecté"}), 401
+
+
+# --- ROUTES API LOCATIONS ---
+
+@app.route('/api/rent', methods=['POST'])
+def rent_app():
+    if 'user' not in session:
+        return jsonify({"error": "Vous devez être connecté pour louer"}), 401
+
+    data = request.json
+    app_id = data.get('app_id')
+    user_email = session['user']
+
+    rentals = get_db(RENTALS_FILE)
+
+    # Création d'une nouvelle demande de location (statut 'pending' avant paiement)
+    new_rental = {
+        "id": len(rentals) + 1,
+        "user_email": user_email,
+        "app_id": app_id,
+        "status": "pending",
+        "date": "2026-04-06"  # On pourra dynamiser la date plus tard
+    }
+
+    rentals.append(new_rental)
+    save_db(RENTALS_FILE, rentals)
+
+    return jsonify({"message": "Demande de location enregistrée", "rental_id": new_rental['id']}), 201
+
+
+@app.route('/api/my-rentals', methods=['GET'])
+def get_my_rentals():
+    if 'user' not in session:
+        return jsonify({"error": "Non connecté"}), 401
+
+    rentals = get_db(RENTALS_FILE)
+    user_rentals = [r for r in rentals if r['user_email'] == session['user']]
+    return jsonify(user_rentals)
 
 
 if __name__ == '__main__':
