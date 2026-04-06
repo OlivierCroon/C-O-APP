@@ -31,6 +31,7 @@ def save_db(file, data):
 # --- ROUTES DES PAGES ---
 
 @app.route('/')
+@app.route('/index.html')
 def home():
     return render_template('index.html')
 
