@@ -1,1 +1,7 @@
-[]
+[
+    {
+        "email": "oliviercroon@hotmail.com",
+        "password": "scrypt:32768:8:1$SShyFvTBIkEa0LN5$eba118832d5d0794386065c30ab571b25d2cc7cb2a9183b55a67a552a18fb32f9d60c13bd346cd4c86005c1f627c916a372a4831f0b144ba2dc58399c4627410",
+        "rentals": []
+    }
+]
