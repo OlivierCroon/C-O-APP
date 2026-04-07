@@ -2,40 +2,88 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AppRent - Catalogue</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
+    <!-- Barre de navigation -->
     <nav class="bg-blue-600 p-4 text-white flex justify-between shadow-lg">
         <h1 class="text-xl font-bold">🚀 AppRent</h1>
-        <a href="admin.html" class="bg-blue-800 px-3 py-1 rounded text-sm">Espace Admin</a>
+        <div id="nav-auth">
+            <!-- Bouton de connexion par défaut -->
+            <a href="/login" class="bg-blue-800 px-3 py-1 rounded text-sm hover:bg-blue-900 transition">Connexion</a>
+        </div>
     </nav>
 
     <main class="p-8">
-        <h2 class="text-3xl font-bold mb-8 text-center text-gray-800">Louer une Application</h2>
+        <!-- Section Catalogue -->
+        <h2 class="text-3xl font-bold mb-8 text-center text-gray-800">Applications à Louer</h2>
+        <div id="app-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <!-- Les cartes d'applications seront insérées ici -->
+        </div>
 
-        <div id="app-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <p class="text-gray-500">Chargement des applications...</p>
+        <hr class="my-8 border-gray-300">
+
+        <!-- Section Mes Locations (masquée si déconnecté) -->
+        <div id="rentals-section" class="hidden">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Mes demandes de location</h2>
+            <div id="rentals-container" class="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+                <p class="text-gray-500 italic text-center">Aucune demande en cours.</p>
+            </div>
         </div>
     </main>
 
     <script>
-        // Fonction pour récupérer les apps depuis le serveur Python
+        // Vérifie si l'utilisateur est connecté au chargement
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/me');
+                if (res.ok) {
+                    const user = await res.json();
+                    document.getElementById('nav-auth').innerHTML = `
+                        <span class="mr-4 text-sm font-semibold">${user.email}</span>
+                        <button onclick="logout()" class="bg-red-500 px-3 py-1 rounded text-sm hover:bg-red-600 transition">Déconnexion</button>
+                        <a href="/admin" class="ml-2 bg-blue-800 px-3 py-1 rounded text-sm hover:bg-blue-900 transition">Admin</a>
+                    `;
+                    // Affiche la section des locations
+                    document.getElementById('rentals-section').classList.remove('hidden');
+                    loadMyRentals();
+                }
+            } catch (error) {
+                console.error("Erreur d'authentification:", error);
+            }
+        }
+
+        // Déconnexion de l'utilisateur
+        async function logout() {
+            await fetch('/api/logout');
+            window.location.reload();
+        }
+
+        // Charge les applications disponibles depuis l'API
         async function loadApps() {
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/apps');
+                const response = await fetch('/api/apps');
                 const apps = await response.json();
                 const container = document.getElementById('app-container');
-                container.innerHTML = ''; // On vide le message de chargement
+                container.innerHTML = '';
+
+                if (apps.length === 0) {
+                    container.innerHTML = '<p class="text-center col-span-full text-gray-500">Aucune application disponible pour le moment.</p>';
+                    return;
+                }
 
                 apps.forEach(app => {
                     container.innerHTML += `
-                        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition border-l-4 border-blue-500">
-                            <h3 class="text-xl font-bold text-gray-800">${app.name}</h3>
-                            <p class="text-gray-600 my-3">${app.desc}</p>
+                        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition border-t-4 border-blue-500 flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-800">${app.name}</h3>
+                                <p class="text-gray-600 my-3 text-sm">${app.desc}</p>
+                            </div>
                             <div class="flex justify-between items-center mt-4">
                                 <span class="text-blue-600 font-bold text-lg">${app.price}€ / mois</span>
-                                <button onclick="window.location.href='${app.url}'" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                <button onclick="rentApp(${app.id})" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
                                     Louer
                                 </button>
                             </div>
@@ -43,11 +91,82 @@
                     `;
                 });
             } catch (error) {
-                console.error("Erreur:", error);
-                document.getElementById('app-container').innerHTML = "Impossible de charger les apps. Lancez le serveur Python !";
+                console.error("Erreur de chargement des apps:", error);
             }
         }
 
+        // Action de louer une application
+        async function rentApp(appId) {
+            const response = await fetch('/api/rent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ app_id: appId })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert("Demande de location enregistrée avec succès !");
+                loadMyRentals();
+            } else {
+                if (response.status === 401) {
+                    alert("Veuillez vous connecter pour effectuer une location.");
+                    window.location.href = '/login';
+                } else {
+                    alert("Erreur : " + result.error);
+                }
+            }
+        }
+
+        // Charge les locations de l'utilisateur connecté
+        async function loadMyRentals() {
+            try {
+                const response = await fetch('/api/my-rentals');
+                if (response.ok) {
+                    const rentals = await response.json();
+                    const container = document.getElementById('rentals-container');
+
+                    if (rentals.length === 0) return;
+
+                    container.innerHTML = `
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="border-b text-gray-600 text-sm">
+                                        <th class="pb-2">ID App</th>
+                                        <th class="pb-2">Statut</th>
+                                        <th class="pb-2">Date de demande</th>
+                                        <th class="pb-2 text-right">Paiement</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    ${rentals.map(r => `
+                                        <tr>
+                                            <td class="py-3 font-semibold">#${r.app_id}</td>
+                                            <td class="py-3">
+                                                <span class="px-2 py-1 rounded text-xs ${r.status === 'en_attente' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                                                    ${r.status.replace('_', ' ')}
+                                                </span>
+                                            </td>
+                                            <td class="py-3 text-gray-500 text-sm">${r.date}</td>
+                                            <td class="py-3 text-right">
+                                                <button class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 transition">
+                                                    Payer
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error("Erreur de chargement des locations:", error);
+            }
+        }
+
+        // Initialisation
+        checkAuth();
         loadApps();
     </script>
 </body>
